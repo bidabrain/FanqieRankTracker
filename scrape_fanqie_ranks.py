@@ -101,6 +101,19 @@ def run_scraper(limit=30, sleep_sec=5, channel="female"):
         }}
         """
         categories = page.evaluate(categories_js)
+
+        # 调试：若分类名为空，输出前5条链接的 outerHTML 帮助诊断
+        if any(not c.get("name") for c in categories):
+            debug_html = page.evaluate(f"""
+            () => Array.from(document.querySelectorAll('a'))
+                .filter(a => a.href.includes('{rank_prefix}'))
+                .slice(0, 5)
+                .map(a => a.outerHTML)
+            """)
+            print(f"⚠️  发现空名称分类，调试 HTML（前5条）:")
+            for h in debug_html:
+                print(" ", h[:300])
+
         print(f"✅ 成功自适应提取到 {len(categories)} 个分类标签。开始全量模拟点击抓取下级数据...")
         
         for cat in categories:
