@@ -117,12 +117,6 @@
       "book_count": 20
     },
     {
-      "type": "",
-      "channel": "male",
-      "url": "api/lastest/male_unknown.json",
-      "book_count": 20
-    },
-    {
       "type": "西方奇幻",
       "channel": "male",
       "url": "api/lastest/male_%E8%A5%BF%E6%96%B9%E5%A5%87%E5%B9%BB.json",

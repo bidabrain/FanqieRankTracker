@@ -400,7 +400,7 @@ def build_lastest_api(output: dict, base_dir: str,
 
     date = output.get("date", "")
     prev_date = output.get("prev_date", "")
-    new_categories = output.get("categories", [])
+    new_categories = [c for c in output.get("categories", []) if c.get("name")]
 
     # 给本频道的每个类别打上 channel 标签
     for cat in new_categories:
