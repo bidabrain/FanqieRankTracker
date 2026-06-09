@@ -342,15 +342,17 @@ document.addEventListener('DOMContentLoaded', () => {
             document.querySelectorAll('#category-list li').forEach(el => {
                 el.classList.toggle('active', el.dataset.category === savedCategory);
             });
-        } else if (data.categories.length > 0) {
-            selectCategory(data.categories[0].name);
+        } else {
+            const firstValid = data.categories.find(c => c.name);
+            if (firstValid) selectCategory(firstValid.name);
         }
     }
 
     // ========== Render sidebar categories ==========
     function renderCategories() {
         categoryList.innerHTML = '';
-        allData.categories.forEach((cat, i) => {
+        const validCats = allData.categories.filter(c => c.name);
+        validCats.forEach((cat, i) => {
             const li = document.createElement('li');
             li.dataset.category = cat.name;
 

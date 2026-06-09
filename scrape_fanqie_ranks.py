@@ -119,7 +119,11 @@ def run_scraper(limit=30, sleep_sec=5, channel="female"):
         for cat in categories:
             cat_name = cat["name"]
             cat_href = cat["href"]
-            
+
+            if not cat_name:
+                print(f"[{datetime.now().strftime('%H:%M:%S')}] ⚠️ 跳过空名称分类（href={cat_href}）")
+                continue
+
             if cat_name in completed_cats:
                 print(f"[{datetime.now().strftime('%H:%M:%S')}] ⏭️ 跳过今日已经完成抓取的类别：{cat_name}")
                 continue
