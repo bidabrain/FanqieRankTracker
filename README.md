@@ -2,7 +2,7 @@
 
 [![English](https://img.shields.io/badge/lang-English-blue)](README_EN.md)
 
-> 👗 专注于**番茄小说女频新书榜**，每日自动追踪排行数据并结合 AI 生成趋势分析，部署为精美的在线看板。
+> 同时追踪**番茄小说女频 & 男频新书榜**，每日自动抓取数据并结合 AI 生成趋势分析，部署为精美的在线看板。
 
 ---
 
@@ -10,11 +10,11 @@
 
 | 功能 | 说明 |
 |------|------|
-| 🕷️ 自动爬取 | 每日定时抓取番茄女性频道各个分类的新书榜 Top 30 |
+| 🕷️ 自动爬取 | 每日定时抓取番茄**女频 & 男频**各分类新书榜 Top 30 |
 | 📊 趋势对比 | 自动对比相邻两天数据：新上榜 / 掉榜 / 排名变化 / 阅读量增长 |
 | 🤖 AI 风向分析 | 接入 OpenAI 兼容 API，按分类生成市场趋势速评 |
 | 🧭 类型风向标 | 独立趋势页聚合多日数据，用 AI 总结古风言情等综合赛道、具体热门分类和高频题材；未配置 API 时自动规则兜底 |
-| 🖥️ 精美看板 | 暗色编辑风格仪表盘，带打字机动画和瀑布流书籍卡片 |
+| 🖥️ 精美看板 | 暗色编辑风格仪表盘，支持女频/男频切换，带打字机动画和瀑布流书籍卡片 |
 | 📱 移动适配 | 完整的移动端适配，侧边栏抽屉式菜单 |
 | 🔌 数据接口 | 生成静态 `lastest` JSON 接口，可按类型读取最新数据 |
 | ⚡ 全自动化 | GitHub Actions + GitHub Pages，零服务器运维 |
@@ -58,8 +58,8 @@
 ### 第四步：手动触发首次运行
 
 1. 进入仓库 → **Actions** → 左侧选择 **Daily Fanqie Rank Scraper**
-2. 点击右上角 **Run workflow** → **Run workflow**
-3. 等待 Workflow 运行完成（约 3–5 分钟）
+2. 点击右上角 **Run workflow**，可选填 `force_rescrape=true` 强制重新爬取
+3. 等待 Workflow 运行完成（约 5–10 分钟，女频 + 男频依次爬取）
 
 运行成功后，`data/` 目录下会自动生成数据文件，打开 GitHub Pages 链接即可看到看板。
 
@@ -79,7 +79,7 @@ GitHub Actions 已配置为 **每天 UTC 00:00（北京时间 08:00）** 自动�
 |---|---|---|
 | 类型索引 | `api/lastest.json` | 返回所有可用类型及对应 URL |
 | 全量数据 | `api/lastest/all.json` | `type=all`，返回全部分类、趋势和书籍 |
-| 单类型数据 | `api/lastest/<类型>.json` | 返回指定类型的数据，例如 `api/lastest/古风世情.json` |
+| 单类型数据 | `api/lastest/<类型>.json` | 返回指定类型的数据，例如 `api/lastest/古风世情.json`（男频以 `male_` 前缀区分） |
 
 示例：
 
@@ -105,15 +105,17 @@ source venv/bin/activate  # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 playwright install chromium
 
-# 4. 运行爬虫（每个分类抓取 Top 30）
-python scrape_fanqie_ranks.py
+# 4. 运行爬虫（女频 + 男频，每个分类抓取 Top 30）
+python scrape_fanqie_ranks.py --channel female
+python scrape_fanqie_ranks.py --channel male
 
 # 5. 构建看板数据（可选，带 AI 分析需设置环境变量）
 pip install openai
 export API_BASE_URL="https://your-api-endpoint/v1"
 export API_KEY="your-api-key"
 export API_MODEL="your-model-name"
-python scripts/build_latest.py
+python scripts/build_latest.py --channel female
+python scripts/build_latest.py --channel male
 
 # 6. 本地预览前端
 python -m http.server 8000
@@ -135,11 +137,15 @@ FanqieRankTracker/
 ├── scripts/
 │   └── build_latest.py         # 趋势对比 + AI 分析构建脚本
 ├── data/
-│   ├── fanqie_female_new_ranks_YYYYMMDD.json  # 每日原始快照
-│   ├── latest_ranks.json       # 最新聚合数据（看板数据源）
+│   ├── fanqie_female_new_ranks_YYYYMMDD.json  # 每日女频原始快照
+│   ├── fanqie_male_new_ranks_YYYYMMDD.json    # 每日男频原始快照
+│   ├── latest_ranks.json       # 女频最新聚合数据
+│   ├── latest_ranks_male.json  # 男频最新聚合数据
 │   ├── market_summary.json     # 全站热点 AI/规则总结
-│   └── trends/
-│       └── YYYY-MM-DD.json     # 趋势归档
+│   ├── trends/
+│   │   └── YYYY-MM-DD.json     # 女频趋势归档
+│   └── trends_male/
+│       └── YYYY-MM-DD.json     # 男频趋势归档
 ├── api/
 │   └── lastest/                # 最新数据静态接口（all + 按类型拆分）
 ├── index.html                  # 仪表盘入口页
@@ -159,8 +165,8 @@ FanqieRankTracker/
 │                                                             │
 │  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐  │
 │  │  Playwright   │───▶│  build_latest │───▶│  git commit  │  │
-│  │  爬取榜单数据  │    │  趋势对比      │    │  自动提交     │  │
-│  │              │    │  + AI 分析     │    │  到 main     │  │
+│  │ 爬取女频+男频  │    │ 女频→男频合并  │    │  自动提交     │  │
+│  │  各分类榜单   │    │  趋势+AI分析   │    │  到 main     │  │
 │  └──────────────┘    └──────────────┘    └──────────────┘  │
 │                                                             │
 └────────────────────────────┬────────────────────────────────┘
@@ -191,9 +197,9 @@ FanqieRankTracker/
 </details>
 
 <details>
-<summary><b>Q: 可以换成男频或其他榜单吗？</b></summary>
+<summary><b>Q: 男频和女频都会自动更新吗？</b></summary>
 
-可以，修改 `scrape_fanqie_ranks.py` 中的 `init_url` 变量，将 URL 改为目标榜单的地址即可。
+是的，`Daily Fanqie Rank Scraper` 每天会依次爬取女频和男频数据，合并写入统一的 `api/lastest/all.json` 接口，前端看板支持切换查看两个频道。
 
 </details>
 
