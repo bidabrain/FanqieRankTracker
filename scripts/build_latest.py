@@ -221,6 +221,23 @@ BATCH_SIZE = 3  # 每批合并的分类数
 
 MARKET_PERIODS = [("7", 7), ("14", 14), ("30", 30), ("all", None)]
 
+CHANNEL_CONFIGS = {
+    "female": {
+        "snapshot_prefix": "fanqie_female_new_ranks",
+        "latest_file": "latest_ranks.json",
+        "trends_dir": "trends",
+        "market_file": "market_summary.json",
+        "dates_file": "dates.json",
+    },
+    "male": {
+        "snapshot_prefix": "fanqie_male_new_ranks",
+        "latest_file": "latest_ranks_male.json",
+        "trends_dir": "trends_male",
+        "market_file": "market_summary_male.json",
+        "dates_file": "dates_male.json",
+    },
+}
+
 GENRE_GROUPS = [
     {"name": "古风言情", "categories": ["古风世情", "古言脑洞", "宫斗宅斗", "种田"]},
     {"name": "现代言情", "categories": ["现言脑洞", "豪门总裁", "职场婚恋", "青春甜宠"]},
@@ -365,43 +382,84 @@ def write_json(path: str, payload: dict):
         json.dump(payload, f, ensure_ascii=False, indent=2)
 
 
-def build_lastest_api(output: dict, base_dir: str):
-    """生成静态 lastest 数据接口。
+def build_lastest_api(output: dict, base_dir: str,
+                      channel: str = "female",
+                      merge: bool = False):
+    """生成统一的静态 lastest 数据接口，男女频类别合并到同一目录。
 
-    GitHub Pages 不支持动态 query API，因此这里将 type 参数映射为静态文件：
-    - api/lastest/all.json：全量数据
-    - api/lastest/<type>.json：单个类型数据
-    - api/lastest.json / api/lastest/index.json：类型索引
+    - api/lastest/all.json：全量数据（含 channel 字段区分频道）
+    - api/lastest/<type>.json：单个类型（女频直接用类型名，男频加 male_ 前缀）
+    - api/lastest.json：类型索引
+
+    merge=False（首次/女频）：清空目录，写入本频道数据。
+    merge=True（男频）：加载已有 all.json，追加本频道类别，重新生成索引。
     """
     api_root = os.path.join(base_dir, "api")
     lastest_dir = os.path.join(api_root, "lastest")
     os.makedirs(lastest_dir, exist_ok=True)
-    for old_path in glob.glob(os.path.join(lastest_dir, "*.json")):
-        os.remove(old_path)
 
     date = output.get("date", "")
     prev_date = output.get("prev_date", "")
-    categories = output.get("categories", [])
+    new_categories = output.get("categories", [])
 
+    # 给本频道的每个类别打上 channel 标签
+    for cat in new_categories:
+        cat["channel"] = channel
+
+    if not merge:
+        # 首次写入（女频）：清空旧文件，直接用本频道数据
+        for old_path in glob.glob(os.path.join(lastest_dir, "*.json")):
+            os.remove(old_path)
+        all_categories = new_categories
+    else:
+        # 追加写入（男频）：加载已有数据，移除同频道旧条目后合并
+        existing_categories = []
+        existing_all_path = os.path.join(lastest_dir, "all.json")
+        if os.path.exists(existing_all_path):
+            try:
+                with open(existing_all_path, "r", encoding="utf-8") as f:
+                    existing_all = json.load(f)
+                for cat in existing_all.get("categories", []):
+                    if "channel" not in cat:
+                        cat["channel"] = "female"
+                # 去掉同频道旧数据，保留其他频道
+                existing_categories = [
+                    c for c in existing_all.get("categories", [])
+                    if c.get("channel") != channel
+                ]
+            except Exception as e:
+                print(f"⚠️  无法加载现有 all.json，将覆盖写入: {e}")
+        # 同时清理本频道的旧单类别文件
+        prefix = f"{channel}_" if channel != "female" else ""
+        if prefix:
+            for old_path in glob.glob(os.path.join(lastest_dir, f"{prefix}*.json")):
+                os.remove(old_path)
+        all_categories = existing_categories + new_categories
+
+    # 写入 all.json（全量合并）
     all_payload = {
         "type": "all",
         "date": date,
         "prev_date": prev_date,
-        "categories": categories,
+        "categories": all_categories,
     }
     write_json(os.path.join(lastest_dir, "all.json"), all_payload)
 
+    # 为每个类别生成单文件，并构建类型索引
     types = [{
         "type": "all",
         "url": "api/lastest/all.json",
-        "category_count": len(categories),
-        "book_count": sum(len(cat.get("books", [])) for cat in categories),
+        "category_count": len(all_categories),
+        "book_count": sum(len(cat.get("books", [])) for cat in all_categories),
     }]
 
     used_filenames = {"all"}
-    for cat in categories:
+    for cat in all_categories:
         type_name = cat.get("name", "")
-        filename = api_type_filename(type_name)
+        cat_channel = cat.get("channel", "female")
+        # 非女频加频道前缀，避免文件名冲突
+        file_prefix = f"{cat_channel}_" if cat_channel != "female" else ""
+        filename = file_prefix + api_type_filename(type_name)
         base_filename = filename
         suffix = 2
         while filename in used_filenames:
@@ -411,6 +469,7 @@ def build_lastest_api(output: dict, base_dir: str):
 
         payload = {
             "type": type_name,
+            "channel": cat_channel,
             "date": date,
             "prev_date": prev_date,
             "category": cat,
@@ -418,10 +477,10 @@ def build_lastest_api(output: dict, base_dir: str):
         }
         write_json(os.path.join(lastest_dir, f"{filename}.json"), payload)
 
-        url = f"api/lastest/{quote(filename)}.json"
         types.append({
             "type": type_name,
-            "url": url,
+            "channel": cat_channel,
+            "url": f"api/lastest/{quote(filename)}.json",
             "book_count": len(cat.get("books", [])),
         })
 
@@ -951,16 +1010,20 @@ def main():
                         help="强制重新生成所有 AI 总结，忽略已有总结")
     parser.add_argument("--date", type=str, default="",
                         help="指定目标日期 (YYYY-MM-DD)，默认使用最新快照")
+    parser.add_argument("--channel", choices=["female", "male"], default="female",
+                        help="频道：female=女频（默认），male=男频")
     args = parser.parse_args()
+
+    ch = CHANNEL_CONFIGS[args.channel]
 
     base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     data_dir = os.path.join(base_dir, "data")
-    trends_dir = os.path.join(data_dir, "trends")
+    trends_dir = os.path.join(data_dir, ch["trends_dir"])
     os.makedirs(trends_dir, exist_ok=True)
 
     # 查找 JSON 快照文件
     snapshots = sorted(
-        glob.glob(os.path.join(data_dir, "fanqie_female_new_ranks_*.json"))
+        glob.glob(os.path.join(data_dir, f"{ch['snapshot_prefix']}_*.json"))
     )
 
     if not snapshots:
@@ -971,7 +1034,7 @@ def main():
     if args.date:
         target_date_compact = args.date.replace("-", "")
         target_path = os.path.join(
-            data_dir, f"fanqie_female_new_ranks_{target_date_compact}.json"
+            data_dir, f"{ch['snapshot_prefix']}_{target_date_compact}.json"
         )
         if not os.path.exists(target_path):
             print(f"❌ 未找到 {args.date} 的快照文件: {target_path}")
@@ -1078,17 +1141,19 @@ def main():
         }
         output["categories"].append(cat_output)
 
-    # 写入 latest_ranks.json
-    out_path = os.path.join(data_dir, "latest_ranks.json")
+    # 写入 latest_ranks[_male].json
+    out_path = os.path.join(data_dir, ch["latest_file"])
     with open(out_path, "w", encoding="utf-8") as f:
         json.dump(output, f, ensure_ascii=False, indent=2)
     print(f"\n✅ 已生成: {out_path}")
 
-    # 生成静态 API 文件：api/lastest/all.json + api/lastest/<type>.json
-    api_dir = build_lastest_api(output, base_dir)
+    # 生成统一静态 API（男频追加合并，女频全量写入）
+    api_dir = build_lastest_api(output, base_dir,
+                                channel=args.channel,
+                                merge=(args.channel != "female"))
     print(f"✅ Lastest API: {api_dir}")
 
-    # 写入 trends/YYYY-MM-DD.json
+    # 写入 trends[_male]/YYYY-MM-DD.json
     trend_output = {
         "date": latest_data["date"],
         "prev_date": prev_date,
@@ -1104,19 +1169,18 @@ def main():
         market_payload = enrich_market_summary_with_ai(
             market_payload, api_key, api_base_url, api_model
         )
-    market_path = os.path.join(data_dir, "market_summary.json")
+    market_path = os.path.join(data_dir, ch["market_file"])
     write_json(market_path, market_payload)
     print(f"✅ 全站热点总结: {market_path}")
 
-    # 生成 dates.json 索引（供前端历史日期选择器使用）
+    # 生成 dates[_male].json 索引（供前端历史日期选择器使用）
     date_list = []
     for s in snapshots:
         fname = os.path.basename(s)
-        # fanqie_female_new_ranks_YYYYMMDD.json -> YYYY-MM-DD
         m = re.search(r"(\d{4})(\d{2})(\d{2})", fname)
         if m:
             date_list.append(f"{m.group(1)}-{m.group(2)}-{m.group(3)}")
-    dates_path = os.path.join(data_dir, "dates.json")
+    dates_path = os.path.join(data_dir, ch["dates_file"])
     with open(dates_path, "w", encoding="utf-8") as f:
         json.dump({"dates": sorted(date_list)}, f, ensure_ascii=False, indent=2)
     print(f"✅ 日期索引: {dates_path} ({len(date_list)} 个日期)")

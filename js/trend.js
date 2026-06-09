@@ -10,6 +10,46 @@ document.addEventListener('DOMContentLoaded', () => {
     let marketSummaryData = null;
     let selectedCategory = '';
     let selectedDays = 7;
+    let selectedChannel = 'female';
+
+    // ========== Channel paths helper ==========
+    // api/lastest/ 是男女频合并的统一接口，trend/market/dates 按频道独立
+    function getChannelPaths(channel) {
+        if (channel === 'male') {
+            return {
+                dates: 'data/dates_male.json',
+                apiIndex: 'api/lastest.json',
+                apiAll: 'api/lastest/all.json',
+                latest: 'data/latest_ranks_male.json',
+                market: 'data/market_summary_male.json',
+                trend: (date) => `data/trends_male/${date}.json`,
+            };
+        }
+        return {
+            dates: 'data/dates.json',
+            apiIndex: 'api/lastest.json',
+            apiAll: 'api/lastest/all.json',
+            latest: 'data/latest_ranks.json',
+            market: 'data/market_summary.json',
+            trend: (date) => `data/trends/${date}.json`,
+        };
+    }
+
+    // ========== Channel toggle ==========
+    const channelToggle = document.getElementById('trend-channel-toggle');
+    if (channelToggle) {
+        channelToggle.querySelectorAll('.channel-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const ch = btn.dataset.channel;
+                if (ch === selectedChannel) return;
+                selectedChannel = ch;
+                channelToggle.querySelectorAll('.channel-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                selectedCategory = '';
+                init();
+            });
+        });
+    }
 
     const genreGroups = [
         { name: '古风言情', categories: ['古风世情', '古言脑洞', '宫斗宅斗', '种田'] },
@@ -37,24 +77,29 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function init() {
         try {
+            const paths = getChannelPaths(selectedChannel);
             const [dateIndex, latestIndex, latestAll, marketSummary] = await Promise.all([
-                fetchJson(`data/dates.json?${cacheBuster}`),
-                fetchJson(`api/lastest.json?${cacheBuster}`).catch(() => null),
-                fetchJson(`api/lastest/all.json?${cacheBuster}`)
-                    .catch(() => fetchJson(`data/latest_ranks.json?${cacheBuster}`)),
-                fetchJson(`data/market_summary.json?${cacheBuster}`).catch(() => null),
+                fetchJson(`${paths.dates}?${cacheBuster}`),
+                fetchJson(`${paths.apiIndex}?${cacheBuster}`).catch(() => null),
+                fetchJson(`${paths.apiAll}?${cacheBuster}`)
+                    .catch(() => fetchJson(`${paths.latest}?${cacheBuster}`)),
+                fetchJson(`${paths.market}?${cacheBuster}`).catch(() => null),
             ]);
             latestData = latestAll;
             marketSummaryData = marketSummary;
 
+            // api/lastest 包含男女频全部类别，按当前频道过滤
             categories = latestIndex && latestIndex.types
-                ? latestIndex.types.filter(item => item.type !== 'all').map(item => item.type)
+                ? latestIndex.types
+                    .filter(item => item.type !== 'all' &&
+                            (!item.channel || item.channel === selectedChannel))
+                    .map(item => item.type)
                 : await loadCategoriesFallback();
 
             const dates = (dateIndex.dates || []).slice().sort();
             const trendDates = dates.slice(1);
             const trendFiles = await Promise.all(
-                trendDates.map(date => fetchJson(`data/trends/${date}.json?${cacheBuster}`).catch(() => null))
+                trendDates.map(date => fetchJson(`${paths.trend(date)}?${cacheBuster}`).catch(() => null))
             );
             trendRows = trendFiles
                 .filter(Boolean)
@@ -77,7 +122,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function loadCategoriesFallback() {
-        const latest = await fetchJson(`data/latest_ranks.json?${cacheBuster}`);
+        const paths = getChannelPaths(selectedChannel);
+        const latest = await fetchJson(`${paths.latest}?${cacheBuster}`);
         return (latest.categories || []).map(cat => cat.name);
     }
 
@@ -318,11 +364,13 @@ document.addEventListener('DOMContentLoaded', () => {
     function buildLatestBookMap() {
         const bookMap = new Map();
         const latestCategories = latestData && latestData.categories ? latestData.categories : [];
-        latestCategories.forEach(cat => {
-            (cat.books || []).forEach(book => {
-                if (book.title) bookMap.set(book.title, book);
+        latestCategories
+            .filter(cat => !cat.channel || cat.channel === selectedChannel)
+            .forEach(cat => {
+                (cat.books || []).forEach(book => {
+                    if (book.title) bookMap.set(book.title, book);
+                });
             });
-        });
         return bookMap;
     }
 

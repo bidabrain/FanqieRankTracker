@@ -189,6 +189,48 @@ input:focus-visible {
     background: linear-gradient(180deg, var(--accent), var(--info));
 }
 
+/* ========== Channel Toggle ========== */
+.channel-toggle {
+    display: flex;
+    gap: 4px;
+    margin-top: 10px;
+    background: var(--bg-strong);
+    padding: 3px;
+    border-radius: var(--radius-pill);
+    width: fit-content;
+}
+
+.channel-btn {
+    height: 26px;
+    padding: 0 14px;
+    border: none;
+    border-radius: var(--radius-pill);
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+    white-space: nowrap;
+}
+
+.channel-btn:hover {
+    color: var(--text-primary);
+}
+
+.channel-btn.active {
+    background: var(--accent);
+    color: #fff;
+}
+
+/* trend page channel toggle sits next to range buttons */
+.trend-controls .channel-toggle {
+    margin-top: 0;
+    background: var(--bg-strong);
+}
+
+/* ========== end Channel Toggle ========== */
+
 .sidebar-subtitle {
     margin-top: 7px;
     color: var(--text-secondary);

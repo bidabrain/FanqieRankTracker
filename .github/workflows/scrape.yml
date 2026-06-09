@@ -32,13 +32,21 @@ jobs:
       id: check_data
       run: |
         TODAY=$(date -u +"%Y%m%d")
-        FILE="data/fanqie_female_new_ranks_${TODAY}.json"
-        if [ -f "$FILE" ]; then
-          echo "exists=true" >> $GITHUB_OUTPUT
-          echo "✅ 今日数据已存在: $FILE，跳过爬取"
+        FEMALE="data/fanqie_female_new_ranks_${TODAY}.json"
+        MALE="data/fanqie_male_new_ranks_${TODAY}.json"
+        if [ -f "$FEMALE" ]; then
+          echo "female_exists=true" >> $GITHUB_OUTPUT
+          echo "✅ 女频数据已存在: $FEMALE，跳过爬取"
         else
-          echo "exists=false" >> $GITHUB_OUTPUT
-          echo "📭 今日数据不存在，将执行爬取"
+          echo "female_exists=false" >> $GITHUB_OUTPUT
+          echo "📭 女频数据不存在，将执行爬取"
+        fi
+        if [ -f "$MALE" ]; then
+          echo "male_exists=true" >> $GITHUB_OUTPUT
+          echo "✅ 男频数据已存在: $MALE，跳过爬取"
+        else
+          echo "male_exists=false" >> $GITHUB_OUTPUT
+          echo "📭 男频数据不存在，将执行爬取"
         fi
 
     - name: Set up Python
@@ -51,18 +59,30 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
-        if [ "${{ steps.check_data.outputs.exists }}" = "false" ]; then
+        NEED_BROWSER=false
+        if [ "${{ steps.check_data.outputs.female_exists }}" = "false" ]; then NEED_BROWSER=true; fi
+        if [ "${{ steps.check_data.outputs.male_exists }}" = "false" ]; then NEED_BROWSER=true; fi
+        if [ "$NEED_BROWSER" = "true" ]; then
           playwright install --with-deps chromium
         fi
 
-    - name: Run Scraper
-      if: steps.check_data.outputs.exists == 'false'
-      run: python scrape_fanqie_ranks.py
+    - name: Run Scraper (Female)
+      if: steps.check_data.outputs.female_exists == 'false'
+      run: python scrape_fanqie_ranks.py --channel female
+      env:
+        GITHUB_ACTIONS: true
+
+    - name: Run Scraper (Male)
+      if: steps.check_data.outputs.male_exists == 'false'
+      run: python scrape_fanqie_ranks.py --channel male
       env:
         GITHUB_ACTIONS: true
 
     - name: Build Latest Data with AI Summary
-      run: pip install openai && python scripts/build_latest.py
+      run: |
+        pip install openai
+        python scripts/build_latest.py --channel female
+        python scripts/build_latest.py --channel male
       env:
         API_BASE_URL: ${{ secrets.API_BASE_URL }}
         API_KEY: ${{ secrets.API_KEY }}

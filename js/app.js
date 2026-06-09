@@ -18,6 +18,45 @@ document.addEventListener('DOMContentLoaded', () => {
     let availableDates = [];   // sorted list of "YYYY-MM-DD"
     let currentDateIndex = -1; // index into availableDates
     let currentCategory = null; // preserve selected category across date switches
+    let currentChannel = 'female'; // 当前频道
+
+    // ========== Channel paths helper ==========
+    function getChannelPaths(channel) {
+        if (channel === 'male') {
+            return {
+                dates: 'data/dates_male.json',
+                latest: 'data/latest_ranks_male.json',
+                snapshot: (dateStr) => `data/fanqie_male_new_ranks_${dateStr.replace(/-/g, '')}.json`,
+                trend: (dateStr) => `data/trends_male/${dateStr}.json`,
+            };
+        }
+        return {
+            dates: 'data/dates.json',
+            latest: 'data/latest_ranks.json',
+            snapshot: (dateStr) => `data/fanqie_female_new_ranks_${dateStr.replace(/-/g, '')}.json`,
+            trend: (dateStr) => `data/trends/${dateStr}.json`,
+        };
+    }
+
+    // ========== Channel toggle ==========
+    const channelToggle = document.getElementById('channel-toggle');
+    if (channelToggle) {
+        channelToggle.querySelectorAll('.channel-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const ch = btn.dataset.channel;
+                if (ch === currentChannel) return;
+                currentChannel = ch;
+                channelToggle.querySelectorAll('.channel-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                // 切频道时重置日期和分类状态
+                availableDates = [];
+                currentDateIndex = -1;
+                currentCategory = null;
+                waterfall.innerHTML = '<p style="color:var(--text-muted);padding:20px;">切换频道中...</p>';
+                initChannel();
+            });
+        });
+    }
 
     // Cache-busting: 每10分钟一个新key，避免浏览器缓存旧JSON
     const cacheBuster = `v=${Math.floor(Date.now() / 600000)}`;
@@ -170,26 +209,29 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // ========== Load dates index, then load latest ==========
-    fetch(`data/dates.json?${cacheBuster}`)
-        .then(r => r.ok ? r.json() : Promise.reject('No dates.json'))
-        .then(idx => {
-            availableDates = idx.dates || [];
-            if (availableDates.length > 0) {
-                // Set min/max for native date input
-                dateInput.min = availableDates[0];
-                dateInput.max = availableDates[availableDates.length - 1];
-            }
-            // Start by loading latest_ranks.json (already has trend data baked in)
-            return loadLatestData();
-        })
-        .catch(() => {
-            // Fallback: no dates.json available, just load latest
-            console.warn('dates.json not found, falling back to latest only');
-            loadLatestData();
-        });
+    function initChannel() {
+        const paths = getChannelPaths(currentChannel);
+        fetch(`${paths.dates}?${cacheBuster}`)
+            .then(r => r.ok ? r.json() : Promise.reject('No dates.json'))
+            .then(idx => {
+                availableDates = idx.dates || [];
+                if (availableDates.length > 0) {
+                    dateInput.min = availableDates[0];
+                    dateInput.max = availableDates[availableDates.length - 1];
+                }
+                return loadLatestData();
+            })
+            .catch(() => {
+                console.warn('dates.json not found, falling back to latest only');
+                loadLatestData();
+            });
+    }
+
+    initChannel();
 
     function loadLatestData() {
-        return fetch(`data/latest_ranks.json?${cacheBuster}`)
+        const paths = getChannelPaths(currentChannel);
+        return fetch(`${paths.latest}?${cacheBuster}`)
             .then(r => {
                 if (!r.ok) throw new Error('Network error');
                 return r.json();
@@ -214,12 +256,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function loadDateData(dateStr) {
-        // dateStr = "YYYY-MM-DD", file = fanqie_female_new_ranks_YYYYMMDD.json
-        const fileDateStr = dateStr.replace(/-/g, '');
         const isLatest = currentDateIndex === availableDates.length - 1;
 
         if (isLatest) {
-            // Just load the pre-built latest with trends
             loadLatestData();
             return;
         }
@@ -227,8 +266,9 @@ document.addEventListener('DOMContentLoaded', () => {
         // Show loading state
         waterfall.innerHTML = '<p style="color:var(--text-muted);padding:20px;">加载中...</p>';
 
-        const snapshotUrl = `data/fanqie_female_new_ranks_${fileDateStr}.json?${cacheBuster}`;
-        const trendUrl = `data/trends/${dateStr}.json?${cacheBuster}`;
+        const paths = getChannelPaths(currentChannel);
+        const snapshotUrl = `${paths.snapshot(dateStr)}?${cacheBuster}`;
+        const trendUrl = `${paths.trend(dateStr)}?${cacheBuster}`;
 
         // Load snapshot + trends in parallel
         Promise.all([
