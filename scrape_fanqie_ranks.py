@@ -84,16 +84,21 @@ def run_scraper(limit=30, sleep_sec=5, channel="female"):
         page.goto(init_url, wait_until="load", timeout=15000)
         page.wait_for_selector('a[href^="/page/"]', timeout=5000)
         
+        # 从 init_url 中提取榜单前缀，如 "/rank/0_1_"（女频）或 "/rank/1_1_"（男频）
+        import re as _re
+        _m = _re.search(r'/rank/(\d+_\d+_)', init_url)
+        rank_prefix = _m.group(0) if _m else '/rank/0_1_'
+
         # 动态解析页面左侧拥有的所有类别目录 (通过匹配对应的榜单路由规律)
-        categories_js = """
-        () => {
+        categories_js = f"""
+        () => {{
             return Array.from(document.querySelectorAll('a'))
-                .filter(a => a.href.includes('/rank/0_1_'))
-                .map(a => ({
+                .filter(a => a.href.includes('{rank_prefix}'))
+                .map(a => ({{
                     name: a.innerText.trim(),
                     href: a.getAttribute('href')
-                }));
-        }
+                }}));
+        }}
         """
         categories = page.evaluate(categories_js)
         print(f"✅ 成功自适应提取到 {len(categories)} 个分类标签。开始全量模拟点击抓取下级数据...")
