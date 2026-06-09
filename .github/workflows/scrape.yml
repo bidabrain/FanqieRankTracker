@@ -14,6 +14,11 @@ on:
     # 每天 UTC 00:00 (北京时间 08:00) 触发
     - cron: '0 0 * * *'
   workflow_dispatch: # 允许手动在界面上点击 Run workflow
+    inputs:
+      force_rescrape:
+        description: '强制重新爬取（忽略今日已有数据）'
+        required: false
+        default: 'false'
 
 jobs:
   scrape-and-commit:
@@ -34,19 +39,20 @@ jobs:
         TODAY=$(date -u +"%Y%m%d")
         FEMALE="data/fanqie_female_new_ranks_${TODAY}.json"
         MALE="data/fanqie_male_new_ranks_${TODAY}.json"
-        if [ -f "$FEMALE" ]; then
+        FORCE="${{ inputs.force_rescrape }}"
+        if [ -f "$FEMALE" ] && [ "$FORCE" != "true" ]; then
           echo "female_exists=true" >> $GITHUB_OUTPUT
           echo "✅ 女频数据已存在: $FEMALE，跳过爬取"
         else
           echo "female_exists=false" >> $GITHUB_OUTPUT
-          echo "📭 女频数据不存在，将执行爬取"
+          echo "📭 女频数据不存在或强制重爬，将执行爬取"
         fi
-        if [ -f "$MALE" ]; then
+        if [ -f "$MALE" ] && [ "$FORCE" != "true" ]; then
           echo "male_exists=true" >> $GITHUB_OUTPUT
           echo "✅ 男频数据已存在: $MALE，跳过爬取"
         else
           echo "male_exists=false" >> $GITHUB_OUTPUT
-          echo "📭 男频数据不存在，将执行爬取"
+          echo "📭 男频数据不存在或强制重爬，将执行爬取"
         fi
 
     - name: Set up Python
@@ -64,6 +70,8 @@ jobs:
         if [ "${{ steps.check_data.outputs.male_exists }}" = "false" ]; then NEED_BROWSER=true; fi
         if [ "$NEED_BROWSER" = "true" ]; then
           playwright install --with-deps chromium
+        else
+          echo "今日数据已存在，跳过浏览器安装"
         fi
 
     - name: Run Scraper (Female)
