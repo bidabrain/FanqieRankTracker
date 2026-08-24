@@ -1,24 +1,24 @@
 {
-  "date": "2026-08-23",
-  "prev_date": "2026-08-22",
+  "date": "2026-08-24",
+  "prev_date": "2026-08-23",
   "types": [
     {
       "type": "all",
       "url": "api/lastest/all.json",
       "category_count": 37,
-      "book_count": 740
+      "book_count": 689
     },
     {
       "type": "古风世情",
       "channel": "female",
       "url": "api/lastest/%E5%8F%A4%E9%A3%8E%E4%B8%96%E6%83%85.json",
-      "book_count": 20
+      "book_count": 19
     },
     {
       "type": "科幻末世",
       "channel": "female",
       "url": "api/lastest/%E7%A7%91%E5%B9%BB%E6%9C%AB%E4%B8%96.json",
-      "book_count": 20
+      "book_count": 0
     },
     {
       "type": "游戏体育",
@@ -60,7 +60,7 @@
       "type": "宫斗宅斗",
       "channel": "female",
       "url": "api/lastest/%E5%AE%AB%E6%96%97%E5%AE%85%E6%96%97.json",
-      "book_count": 20
+      "book_count": 0
     },
     {
       "type": "悬疑脑洞",
@@ -186,7 +186,7 @@
       "type": "悬疑脑洞",
       "channel": "male",
       "url": "api/lastest/male_%E6%82%AC%E7%96%91%E8%84%91%E6%B4%9E.json",
-      "book_count": 20
+      "book_count": 10
     },
     {
       "type": "都市脑洞",
