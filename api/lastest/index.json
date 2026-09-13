@@ -1,18 +1,18 @@
 {
-  "date": "2026-09-12",
-  "prev_date": "2026-09-11",
+  "date": "2026-09-13",
+  "prev_date": "2026-09-12",
   "types": [
     {
       "type": "all",
       "url": "api/lastest/all.json",
       "category_count": 37,
-      "book_count": 659
+      "book_count": 739
     },
     {
       "type": "古风世情",
       "channel": "female",
       "url": "api/lastest/%E5%8F%A4%E9%A3%8E%E4%B8%96%E6%83%85.json",
-      "book_count": 20
+      "book_count": 19
     },
     {
       "type": "科幻末世",
@@ -42,19 +42,19 @@
       "type": "种田",
       "channel": "female",
       "url": "api/lastest/%E7%A7%8D%E7%94%B0.json",
-      "book_count": 0
+      "book_count": 20
     },
     {
       "type": "年代",
       "channel": "female",
       "url": "api/lastest/%E5%B9%B4%E4%BB%A3.json",
-      "book_count": 0
+      "book_count": 20
     },
     {
       "type": "现言脑洞",
       "channel": "female",
       "url": "api/lastest/%E7%8E%B0%E8%A8%80%E8%84%91%E6%B4%9E.json",
-      "book_count": 10
+      "book_count": 20
     },
     {
       "type": "宫斗宅斗",
@@ -120,7 +120,7 @@
       "type": "西方奇幻",
       "channel": "male",
       "url": "api/lastest/male_%E8%A5%BF%E6%96%B9%E5%A5%87%E5%B9%BB.json",
-      "book_count": 19
+      "book_count": 20
     },
     {
       "type": "东方仙侠",
@@ -144,7 +144,7 @@
       "type": "都市修真",
       "channel": "male",
       "url": "api/lastest/male_%E9%83%BD%E5%B8%82%E4%BF%AE%E7%9C%9F.json",
-      "book_count": 10
+      "book_count": 20
     },
     {
       "type": "都市高武",
@@ -186,7 +186,7 @@
       "type": "悬疑脑洞",
       "channel": "male",
       "url": "api/lastest/male_%E6%82%AC%E7%96%91%E8%84%91%E6%B4%9E.json",
-      "book_count": 0
+      "book_count": 20
     },
     {
       "type": "都市脑洞",
