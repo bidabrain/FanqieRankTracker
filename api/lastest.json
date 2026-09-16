@@ -1,18 +1,18 @@
 {
-  "date": "2026-09-15",
-  "prev_date": "2026-09-14",
+  "date": "2026-09-16",
+  "prev_date": "2026-09-15",
   "types": [
     {
       "type": "all",
       "url": "api/lastest/all.json",
       "category_count": 37,
-      "book_count": 729
+      "book_count": 739
     },
     {
       "type": "古风世情",
       "channel": "female",
       "url": "api/lastest/%E5%8F%A4%E9%A3%8E%E4%B8%96%E6%83%85.json",
-      "book_count": 19
+      "book_count": 20
     },
     {
       "type": "科幻末世",
@@ -24,7 +24,7 @@
       "type": "游戏体育",
       "channel": "female",
       "url": "api/lastest/%E6%B8%B8%E6%88%8F%E4%BD%93%E8%82%B2.json",
-      "book_count": 10
+      "book_count": 20
     },
     {
       "type": "女频衍生",
@@ -120,7 +120,7 @@
       "type": "西方奇幻",
       "channel": "male",
       "url": "api/lastest/male_%E8%A5%BF%E6%96%B9%E5%A5%87%E5%B9%BB.json",
-      "book_count": 20
+      "book_count": 19
     },
     {
       "type": "东方仙侠",
