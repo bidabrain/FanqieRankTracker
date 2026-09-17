@@ -1,18 +1,18 @@
 {
-  "date": "2026-09-16",
-  "prev_date": "2026-09-15",
+  "date": "2026-09-17",
+  "prev_date": "2026-09-16",
   "types": [
     {
       "type": "all",
       "url": "api/lastest/all.json",
       "category_count": 37,
-      "book_count": 739
+      "book_count": 718
     },
     {
       "type": "古风世情",
       "channel": "female",
       "url": "api/lastest/%E5%8F%A4%E9%A3%8E%E4%B8%96%E6%83%85.json",
-      "book_count": 20
+      "book_count": 19
     },
     {
       "type": "科幻末世",
@@ -150,7 +150,7 @@
       "type": "都市高武",
       "channel": "male",
       "url": "api/lastest/male_%E9%83%BD%E5%B8%82%E9%AB%98%E6%AD%A6.json",
-      "book_count": 20
+      "book_count": 0
     },
     {
       "type": "历史古代",
