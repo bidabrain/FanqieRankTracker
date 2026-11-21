@@ -4,6 +4,7 @@ permissions:
   contents: write
   pages: write
   id-token: write
+  actions: write  # Keep schedule alive 需要调用 enable workflow API
 
 concurrency:
   group: pages
@@ -35,6 +36,13 @@ jobs:
       uses: actions/checkout@v4
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
+
+    # 公开仓库 60 天无人工活动会自动停用定时任务（bot 提交不算活动），每次运行时重新 enable 以续期
+    - name: Keep schedule alive
+      continue-on-error: true
+      run: gh workflow enable scrape.yml --repo ${{ github.repository }}
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Check if today's data exists
       id: check_data
