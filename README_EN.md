@@ -63,7 +63,7 @@ After a successful run, data files will be generated in the `data/` directory. O
 
 ### Step 5: Sit Back and Relax
 
-GitHub Actions is configured to run automatically at **UTC 00:00 (08:00 Beijing Time)** every day. No further manual action is needed — data and dashboard will auto-update daily.
+GitHub Actions is configured to run automatically at **UTC 00:23 (08:23 Beijing Time)** every day, with catch-up runs at UTC 08:23 and 14:23 that skip automatically once the day's data is complete. No further manual action is needed — data and dashboard will auto-update daily.
 
 ---
 

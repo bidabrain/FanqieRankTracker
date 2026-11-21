@@ -7,12 +7,15 @@ permissions:
 
 concurrency:
   group: pages
-  cancel-in-progress: true
+  cancel-in-progress: false  # 排队而不是取消：避免补跑把还在抓取的运行取消掉
 
 on:
   schedule:
     # 每天 UTC 00:23 (北京时间 08:23) 触发，避开整点高峰
     - cron: '23 0 * * *'
+    # 补跑：GitHub 定时任务偶尔会被丢弃或抓取失败；当天数据已齐时这两次会直接跳过
+    - cron: '23 8 * * *'
+    - cron: '23 14 * * *'
   workflow_dispatch: # 允许手动在界面上点击 Run workflow
     inputs:
       force_rescrape:
@@ -54,14 +57,23 @@ jobs:
           echo "male_exists=false" >> $GITHUB_OUTPUT
           echo "📭 男频数据不存在或强制重爬，将执行爬取"
         fi
+        # 定时补跑时，若两个频道今天都已抓到，直接跳过后续所有步骤（不重复总结/部署）
+        if [ "${{ github.event_name }}" = "schedule" ] && [ -f "$FEMALE" ] && [ -f "$MALE" ]; then
+          echo "skip_all=true" >> $GITHUB_OUTPUT
+          echo "⏭️ 今日两个频道数据均已存在，本次定时补跑无需执行"
+        else
+          echo "skip_all=false" >> $GITHUB_OUTPUT
+        fi
 
     - name: Set up Python
+      if: steps.check_data.outputs.skip_all != 'true'
       uses: actions/setup-python@v5
       with:
         python-version: '3.9'
         cache: 'pip'
 
     - name: Install Dependencies
+      if: steps.check_data.outputs.skip_all != 'true'
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
@@ -74,19 +86,25 @@ jobs:
           echo "今日数据已存在，跳过浏览器安装"
         fi
 
+    # continue-on-error: 一个频道失败不影响另一个，已抓到的数据照样提交
     - name: Run Scraper (Female)
+      id: scrape_female
       if: steps.check_data.outputs.female_exists == 'false'
+      continue-on-error: true
       run: python scrape_fanqie_ranks.py --channel female
       env:
         GITHUB_ACTIONS: true
 
     - name: Run Scraper (Male)
+      id: scrape_male
       if: steps.check_data.outputs.male_exists == 'false'
+      continue-on-error: true
       run: python scrape_fanqie_ranks.py --channel male
       env:
         GITHUB_ACTIONS: true
 
     - name: Build Latest Data with AI Summary
+      if: steps.check_data.outputs.skip_all != 'true'
       run: |
         pip install openai
         python scripts/build_latest.py --channel female
@@ -97,6 +115,7 @@ jobs:
         API_MODEL: ${{ secrets.API_MODEL }}
 
     - name: Commit and Push Changes
+      if: steps.check_data.outputs.skip_all != 'true'
       uses: stefanzweifel/git-auto-commit-action@v5
       with:
         commit_message: "[Auto] Update Fanqie daily ranks"
@@ -105,15 +124,25 @@ jobs:
 
     # ---- Deploy to GitHub Pages (inline, 绕过 GITHUB_TOKEN 不触发其他 workflow 的限制) ----
     - name: Setup Pages
+      if: steps.check_data.outputs.skip_all != 'true'
       uses: actions/configure-pages@v5
       with:
         enablement: true
 
     - name: Upload Pages artifact
+      if: steps.check_data.outputs.skip_all != 'true'
       uses: actions/upload-pages-artifact@v3
       with:
         path: '.'
 
     - name: Deploy to GitHub Pages
       id: deployment
+      if: steps.check_data.outputs.skip_all != 'true'
       uses: actions/deploy-pages@v4
+
+    # 抓取有失败时，数据已提交、页面已部署，最后再把本次运行标红提醒
+    - name: Report Scraper Failure
+      if: steps.scrape_female.outcome == 'failure' || steps.scrape_male.outcome == 'failure'
+      run: |
+        echo "::error::抓取失败 - 女频: ${{ steps.scrape_female.outcome }}，男频: ${{ steps.scrape_male.outcome }}。缺失的频道会在下一次定时补跑时重试。"
+        exit 1

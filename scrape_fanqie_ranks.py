@@ -81,8 +81,21 @@ def run_scraper(limit=30, sleep_sec=5, channel="female"):
         
         # 先访问新书榜的基准前缀页面，以此为入口模拟人工作业
         print(f"[{datetime.now().strftime('%H:%M:%S')}] 正在初始化并访问基础榜单页：{init_url}")
-        page.goto(init_url, wait_until="load", timeout=15000)
-        page.wait_for_selector('a[href^="/page/"]', timeout=5000)
+        # 首页加载偶尔会因网络慢或限流超时，失败后重试，避免整个任务直接崩掉
+        max_attempts = 3
+        for attempt in range(1, max_attempts + 1):
+            try:
+                page.goto(init_url, wait_until="domcontentloaded", timeout=60000)
+                page.wait_for_selector('a[href^="/page/"]', timeout=30000)
+                break
+            except Exception as e:
+                print(f"[{datetime.now().strftime('%H:%M:%S')}] ⚠️ 第 {attempt}/{max_attempts} 次加载榜单页失败: {e}")
+                if attempt == max_attempts:
+                    browser.close()
+                    raise SystemExit(f"❌ 榜单页连续 {max_attempts} 次加载失败，放弃本次抓取")
+                wait = 20 * attempt
+                print(f"等待 {wait} 秒后重试...")
+                time.sleep(wait)
         
         # 从 init_url 中提取榜单前缀，如 "/rank/0_1_"（女频）或 "/rank/1_1_"（男频）
         import re as _re
