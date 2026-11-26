@@ -1,0 +1,24 @@
+name: Sync to Gitee
+
+# 手动把仓库里现有的最新数据接口同步到 Gitee 镜像（首次配置或 Gitee 同步失败后补推用）。
+# 每日更新和强制更新结束时会自动同步，平时不用手动跑。
+
+permissions:
+  contents: read
+
+on:
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-22.04
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Sync to Gitee
+      run: bash scripts/sync_gitee.sh
+      env:
+        GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
+        GITEE_REPO: ${{ vars.GITEE_REPO }}
+        GITEE_USER: ${{ vars.GITEE_USER }}

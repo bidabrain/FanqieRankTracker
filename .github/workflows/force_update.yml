@@ -101,3 +101,13 @@ jobs:
     - name: Deploy to GitHub Pages
       id: deployment
       uses: actions/deploy-pages@v5
+
+    # 同步最新数据接口到 Gitee 镜像（没配 GITEE_TOKEN / GITEE_REPO 时跳过；失败不影响 Pages）
+    - name: Sync to Gitee
+      if: always()
+      continue-on-error: true
+      run: bash scripts/sync_gitee.sh
+      env:
+        GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
+        GITEE_REPO: ${{ vars.GITEE_REPO }}
+        GITEE_USER: ${{ vars.GITEE_USER }}

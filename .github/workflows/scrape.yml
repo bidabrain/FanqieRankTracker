@@ -148,6 +148,16 @@ jobs:
       if: steps.check_data.outputs.skip_all != 'true'
       uses: actions/deploy-pages@v5
 
+    # 同步最新数据接口到 Gitee 镜像（没配 GITEE_TOKEN / GITEE_REPO 时跳过；失败不影响 Pages）
+    - name: Sync to Gitee
+      if: steps.check_data.outputs.skip_all != 'true' && always()
+      continue-on-error: true
+      run: bash scripts/sync_gitee.sh
+      env:
+        GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
+        GITEE_REPO: ${{ vars.GITEE_REPO }}
+        GITEE_USER: ${{ vars.GITEE_USER }}
+
     # 抓取有失败时，数据已提交、页面已部署，最后再把本次运行标红提醒
     - name: Report Scraper Failure
       if: steps.scrape_female.outcome == 'failure' || steps.scrape_male.outcome == 'failure'
