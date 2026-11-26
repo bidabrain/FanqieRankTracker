@@ -88,25 +88,6 @@ curl https://<你的用户名>.github.io/FanqieRankTracker/api/lastest/all.json
 curl https://<你的用户名>.github.io/FanqieRankTracker/api/lastest/古风世情.json
 ```
 
-### Gitee 镜像（国内访问）
-
-国内直连 github.io 和 jsDelivr 常常超时。配置后，每次更新数据都会把 `api/lastest.json` 和 `api/lastest/`（不含超过 1 MB、Gitee 需登录才能下载的 `all.json`）强推到一个 Gitee 仓库，只保留最新一份，不带历史：
-
-1. 在 Gitee 新建一个**公开**的空仓库（如 `FanqieRankTracker`，不要勾选初始化 README）。
-2. Gitee → 设置 → 私人令牌，生成一个勾选 `projects` 权限的令牌。
-3. GitHub 仓库 → Settings → Secrets and variables → Actions：
-   - **Secrets** 新建 `GITEE_TOKEN`，填上一步的令牌；
-   - **Variables** 新建 `GITEE_REPO`，填 `Gitee用户名/仓库名`（仓库在组织下时，再加 `GITEE_USER` 填令牌所属用户名）。
-4. Actions → **Sync to Gitee** → Run workflow，手动同步一次看是否成功。之后每次每日更新会自动同步。
-
-之后可以用 Gitee 的 raw 地址代替 GitHub Pages，例如小纸 Pico 的书城榜单地址填：
-
-```
-https://gitee.com/<Gitee用户名>/<仓库名>/raw/main
-```
-
-未配置 `GITEE_TOKEN` / `GITEE_REPO` 时同步自动跳过，不影响 GitHub Pages。
-
 ---
 
 ## 🔧 本地开发
